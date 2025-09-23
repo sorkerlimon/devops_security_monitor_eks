@@ -49,6 +49,7 @@ Production\Service\malware_detector.log
 Production\terraform\terraform.tfvars
 Production\terraform\terraform.tfstate
 Production\terraform\variables.tf
+Production/terraform/terraform.tfvars
 
 Production\docs
 
