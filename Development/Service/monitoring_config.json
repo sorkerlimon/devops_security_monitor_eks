@@ -1,0 +1,47 @@
+{
+  "global_settings": {
+    "scan_interval": 30,
+    "alert_cooldown": 300,
+    "api_enabled": true,
+    "api_username": "admin",
+    "api_password": "admin123"
+  },
+  "malware_detection": {
+    "scan_interval": 30,
+    "min_suspicious_score": 3,
+    "alert_cooldown": 300,
+    "download_paths": [
+      "~/Downloads",
+      "~/Desktop",
+      "C:\\Users\\Public\\Downloads",
+      "C:\\Temp"
+    ],
+    "suspicious_extensions": [".exe", ".bat", ".cmd", ".scr", ".pif", ".com", ".vbs", ".js", ".jar"],
+    "max_file_size": 104857600
+  },
+  "web_monitoring": {
+    "scan_interval": 10,
+    "min_suspicious_score": 3,
+    "alert_cooldown": 300,
+    "legitimate_domains": [
+      "amazonaws.com", "compute-1.amazonaws.com", "compute.amazonaws.com",
+      "github.com", "githubusercontent.com", "github.io",
+      "lastpass.com", "cloudfront.net", "elevohost.com",
+      "google.com", "googleapis.com", "gstatic.com",
+      "microsoft.com", "office.com", "live.com",
+      "stackoverflow.com", "wikipedia.org", "youtube.com",
+      "facebook.com", "twitter.com", "linkedin.com"
+    ],
+    "suspicious_keywords": [
+      "gambling", "casino", "betting", "porn", "adult", "hack", "crack",
+      "torrent", "pirate", "illegal", "drug", "weapon", "violence"
+    ]
+  },
+  "network_monitoring": {
+    "scan_interval": 30,
+    "alert_cooldown": 300,
+    "report_open_ports_only": true,
+    "common_ports": [21, 22, 23, 25, 53, 80, 110, 143, 443, 993, 995, 3389, 5432, 3306, 6379],
+    "alert_threshold": 10
+  }
+}

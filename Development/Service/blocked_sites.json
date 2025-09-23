@@ -1,0 +1,13 @@
+{
+  "blocked_domains": [
+    "example-malicious-site.com",
+    "suspicious-domain.tk",
+    "gambling-site.com",
+    "adult-content.com",
+    "phishing-site.net"
+  ],
+  "description": "Blocked domains list",
+  "version": "1.0",
+  "last_updated": "2024-01-15",
+  "total_domains": 5
+}

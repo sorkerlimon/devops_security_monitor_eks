@@ -1,0 +1,18 @@
+{
+  "allowed_domains": [
+    "google.com",
+    "microsoft.com",
+    "github.com",
+    "stackoverflow.com",
+    "wikipedia.org",
+    "youtube.com",
+    "facebook.com",
+    "twitter.com",
+    "linkedin.com",
+    "amazon.com"
+  ],
+  "description": "Allowed domains whitelist",
+  "version": "1.0",
+  "last_updated": "2024-01-15",
+  "total_domains": 10
+}

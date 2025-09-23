@@ -1,0 +1,172 @@
+# Prometheus and Grafana Helm Values
+# This configuration sets up monitoring for the Security Monitor application
+
+# Prometheus Configuration
+prometheus:
+  prometheusSpec:
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector: {}
+    serviceMonitorNamespaceSelector: {}
+    ruleSelectorNilUsesHelmValues: false
+    ruleSelector: {}
+    ruleNamespaceSelector: {}
+    retention: 30d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp2
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 50Gi
+    additionalScrapeConfigs:
+      - job_name: 'security-monitor-backend'
+        kubernetes_sd_configs:
+        - role: endpoints
+          namespaces:
+            names:
+            - security-monitor
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_service_name]
+          action: keep
+          regex: security-monitor-backend
+        - source_labels: [__meta_kubernetes_endpoint_port_name]
+          action: keep
+          regex: http
+        - source_labels: [__address__]
+          action: replace
+          target_label: __address__
+          regex: (.+)
+          replacement: ${1}:8000
+        - source_labels: [__meta_kubernetes_namespace]
+          target_label: kubernetes_namespace
+        - source_labels: [__meta_kubernetes_service_name]
+          target_label: kubernetes_name
+        - source_labels: [__meta_kubernetes_pod_name]
+          target_label: kubernetes_pod_name
+
+      - job_name: 'security-monitor-frontend'
+        kubernetes_sd_configs:
+        - role: endpoints
+          namespaces:
+            names:
+            - security-monitor
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_service_name]
+          action: keep
+          regex: security-monitor-frontend
+        - source_labels: [__meta_kubernetes_endpoint_port_name]
+          action: keep
+          regex: http
+        - source_labels: [__address__]
+          action: replace
+          target_label: __address__
+          regex: (.+)
+          replacement: ${1}:3000
+        - source_labels: [__meta_kubernetes_namespace]
+          target_label: kubernetes_namespace
+        - source_labels: [__meta_kubernetes_service_name]
+          target_label: kubernetes_name
+        - source_labels: [__meta_kubernetes_pod_name]
+          target_label: kubernetes_pod_name
+
+# Grafana Configuration
+grafana:
+  enabled: true
+  adminPassword: "admin123"
+  persistence:
+    enabled: true
+    storageClassName: gp2
+    size: 10Gi
+  service:
+    type: LoadBalancer
+    port: 80
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+  dashboards:
+    default:
+      security-monitor:
+        gnetId: 315
+        revision: 1
+        datasource: Prometheus
+      kubernetes-cluster:
+        gnetId: 7249
+        revision: 1
+        datasource: Prometheus
+      kubernetes-pods:
+        gnetId: 6336
+        revision: 1
+        datasource: Prometheus
+  grafana.ini:
+    server:
+      root_url: "%(protocol)s://%(domain)s:%(http_port)s/"
+    security:
+      admin_user: admin
+      admin_password: admin123
+    users:
+      allow_sign_up: false
+      auto_assign_org: true
+      auto_assign_org_role: Viewer
+    auth.anonymous:
+      enabled: false
+    feature_toggles:
+      enable: ngalert
+    alerting:
+      enabled: true
+    unified_alerting:
+      enabled: true
+
+# AlertManager Configuration
+alertmanager:
+  enabled: true
+  config:
+    global:
+      smtp_smarthost: 'localhost:587'
+      smtp_from: 'alerts@security-monitor.com'
+    route:
+      group_by: ['alertname']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 1h
+      receiver: 'web.hook'
+    receivers:
+    - name: 'web.hook'
+      webhook_configs:
+      - url: 'http://127.0.0.1:5001/'
+    - name: 'email'
+      email_configs:
+      - to: 'admin@security-monitor.com'
+        subject: 'Security Monitor Alert'
+        body: |
+          Alert: {{ .GroupLabels.alertname }}
+          Description: {{ .Annotations.description }}
+          Severity: {{ .Labels.severity }}
+
+# Node Exporter Configuration
+nodeExporter:
+  enabled: true
+
+# Kube State Metrics Configuration
+kubeStateMetrics:
+  enabled: true
+
+# Service Monitor for Security Monitor
+serviceMonitor:
+  enabled: true
+  namespace: security-monitor
+  labels:
+    app: security-monitor
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s

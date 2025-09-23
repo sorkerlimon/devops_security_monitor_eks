@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: security-monitor
+  labels:
+    name: security-monitor
+    app.kubernetes.io/name: security-monitor
+    app.kubernetes.io/instance: security-monitor
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: platform
+    app.kubernetes.io/part-of: security-monitor
+    app.kubernetes.io/managed-by: helm

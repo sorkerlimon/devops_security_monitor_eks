@@ -1,0 +1,18 @@
+{
+  "scan_interval": 10,
+  "dns_monitor": true,
+  "browser_monitor": true,
+  "network_monitor": true,
+  "blacklist_file": "blocked_sites.json",
+  "whitelist_file": "allowed_sites.json",
+  "suspicious_keywords": [
+    "gambling", "casino", "betting", "porn", "adult", "hack", "crack",
+    "torrent", "pirate", "illegal", "drug", "weapon", "violence",
+    "phishing", "scam", "fake", "malware", "virus", "trojan"
+  ],
+  "suspicious_tlds": [".tk", ".ml", ".ga", ".cf", ".bit", ".onion"],
+  "max_connections_per_minute": 50,
+  "alert_threshold": 5,
+  "log_file": "web_monitor.log",
+  "output_file": "web_report.json"
+}

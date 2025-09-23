@@ -1,0 +1,94 @@
+{
+  "timestamp": "2025-09-10T12:56:55.876711",
+  "port_status": {
+    "3306": {
+      "open": true,
+      "last_checked": "2025-09-10T12:56:33.646942"
+    },
+    "22": {
+      "open": false,
+      "last_checked": "2025-09-10T12:56:35.686513"
+    },
+    "23": {
+      "open": false,
+      "last_checked": "2025-09-10T12:56:35.686502"
+    },
+    "25": {
+      "open": false,
+      "last_checked": "2025-09-10T12:56:35.686527"
+    },
+    "80": {
+      "open": false,
+      "last_checked": "2025-09-10T12:56:35.686520"
+    },
+    "21": {
+      "open": false,
+      "last_checked": "2025-09-10T12:56:35.686518"
+    },
+    "53": {
+      "open": false,
+      "last_checked": "2025-09-10T12:56:35.686535"
+    },
+    "143": {
+      "open": false,
+      "last_checked": "2025-09-10T12:56:35.686531"
+    },
+    "110": {
+      "open": false,
+      "last_checked": "2025-09-10T12:56:35.686525"
+    },
+    "443": {
+      "open": false,
+      "last_checked": "2025-09-10T12:56:35.686516"
+    },
+    "5432": {
+      "open": false,
+      "last_checked": "2025-09-10T12:56:35.686523"
+    },
+    "6379": {
+      "open": false,
+      "last_checked": "2025-09-10T12:56:35.686533"
+    },
+    "993": {
+      "open": false,
+      "last_checked": "2025-09-10T12:56:35.686529"
+    },
+    "3389": {
+      "open": false,
+      "last_checked": "2025-09-10T12:56:35.686522"
+    },
+    "995": {
+      "open": false,
+      "last_checked": "2025-09-10T12:56:35.686537"
+    }
+  },
+  "alerts": [],
+  "config": {
+    "scan_interval": 30,
+    "common_ports": [
+      21,
+      22,
+      23,
+      25,
+      53,
+      80,
+      110,
+      143,
+      443,
+      993,
+      995,
+      3389,
+      5432,
+      3306,
+      6379
+    ],
+    "alert_threshold": 10,
+    "log_file": "network_monitor.log",
+    "output_file": "network_report.json",
+    "api_enabled": true,
+    "api_username": "limon",
+    "api_password": "limon@123",
+    "alert_cooldown": 300,
+    "report_open_ports_only": true
+  }
+}
