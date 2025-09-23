@@ -13,6 +13,12 @@ RUN npm ci --silent
 # Copy source code
 COPY . .
 
+# Set production environment variables
+ENV VITE_API_URL="https://security-monitor.dreamhrai.com/api/v1"
+ENV VITE_APP_TITLE="Network Security Monitor"
+ENV VITE_APP_VERSION="1.0.0"
+ENV NODE_ENV="production"
+
 # Build the application
 RUN npm run build
 

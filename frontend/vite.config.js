@@ -7,13 +7,13 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 3000,
     strictPort: true,
-    allowedHosts: ['security-monitor.local', 'localhost']
+    allowedHosts: ['security-monitor.local', 'localhost','security-monitor.dreamhrai.com']
   },
   preview: {
     host: '0.0.0.0',
     port: 3000,
     strictPort: true,
-    allowedHosts: ['security-monitor.local', 'localhost']
+    allowedHosts: ['security-monitor.local', 'localhost','security-monitor.dreamhrai.com']
   },
   build: {
     outDir: 'dist',

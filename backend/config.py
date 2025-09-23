@@ -27,6 +27,8 @@ class Settings:
         "http://localhost:8000",
         "http://security-monitor.local:3000",
         "https://security-monitor.local:3000",
+        "http://security-monitor.dreamhrai.com",
+        "https://security-monitor.dreamhrai.com",
     ]
 
 settings = Settings()
