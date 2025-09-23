@@ -14,7 +14,7 @@ data:
   ALGORITHM: "HS256"
   ACCESS_TOKEN_EXPIRE_MINUTES: "30"
   MYSQL_DATABASE: "security_monitor"
-  MYSQL_HOST: "18.195.122.40"
+  MYSQL_HOST: "MYSQL_HOST"
   MYSQL_PORT: "3306"
 
   # Frontend Configuration
