@@ -285,7 +285,7 @@ The biggest challenge was **database connectivity in the Kubernetes environment*
 ## 📞 Contact
 
 - **GitHub**: [Your GitHub Profile]
-- **Email**: [Your Email]
+- **Email**: [sorkerlimon18@gmail.com]
 - **LinkedIn**: [Your LinkedIn Profile]
 
 ---
