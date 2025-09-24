@@ -22,6 +22,7 @@
 # kubectl config unset users.kind-cka-cluster1
 
 
+
 set -e
 
 echo "🚀 Deploying Security Monitor to Kubernetes..."
