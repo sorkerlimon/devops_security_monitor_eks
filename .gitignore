@@ -3,3 +3,6 @@ backend/.env
 
 # Documentation
 backend/docs
+
+# Terraform variables
+terraform/terraform.tfvars
