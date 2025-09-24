@@ -1,2 +1,5 @@
 # Environment variables
 backend/.env
+
+# Documentation
+backend/docs
