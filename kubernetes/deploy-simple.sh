@@ -37,7 +37,7 @@ echo "📦 Step 1: Creating namespace..."
 kubectl apply -f namespace.yaml
 echo "   ✅ Check: kubectl get namespace security-monitor"
 kubectl config set-context --current --namespace=security-monitor
-kubectl get namespaces | grep security-monitor
+kubectl get namespaces | findstr security-monitor
 
 # Step 2: Apply ConfigMap
 echo "🔧 Step 2: Applying ConfigMap..."
@@ -53,12 +53,16 @@ kubectl get secrets -n security-monitor
 
 # Step 4: Create ECR Secret (Working method)
 echo "🐳 Step 4: Creating ECR secret..."
+# Delete existing secret if it exists
+kubectl delete secret ecr-secret -n security-monitor --ignore-not-found=true
+# Create fresh ECR secret with current AWS credentials
 kubectl create secret docker-registry ecr-secret \
   --docker-server=299138067566.dkr.ecr.eu-central-1.amazonaws.com \
   --docker-username=AWS \
   --docker-password=$(aws ecr get-login-password --region eu-central-1) \
   --namespace=security-monitor
 echo "   ✅ ECR secret created successfully"
+
 
 # Step 5: Deploy Backend
 echo "🚀 Step 5: Deploying Backend..."
@@ -87,14 +91,6 @@ kubectl get pods -n security-monitor
 
 
 
-# Step 4: Create ECR Secret (Working method)
-echo "🐳 Step 4: Creating ECR secret..."
-kubectl create secret docker-registry ecr-secret \
-  --docker-server=299138067566.dkr.ecr.eu-central-1.amazonaws.com \
-  --docker-username=AWS \
-  --docker-password=$(aws ecr get-login-password --region eu-central-1) \
-  --namespace=security-monitor
-echo "   ✅ ECR secret created successfully"
 
 
 # Step 9: Deploy Frontend Service
