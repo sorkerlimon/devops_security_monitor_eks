@@ -10,9 +10,6 @@ spec:
     repoURL: https://github.com/sorkerlimon/devops_security_monitor_eks.git
     targetRevision: HEAD
     path: kubernetes
-    directory:
-      exclude: |
-        ecr-secret.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: security-monitor
