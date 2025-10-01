@@ -1,0 +1,307 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ masin, deveslop ]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/ci-cd.yml'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'build'
+        type: choice
+        options:
+        - build
+        - test
+        - security-scan
+        - deploy
+        - rollback
+      environment:
+        description: 'Environment (for deploy/rollback)'
+        required: false
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+      image_tag:
+        description: 'Image tag (for rollback)'
+        required: false
+        type: string
+
+env:
+  AWS_REGION: eu-central-1
+  ECR_REGISTRY: 299138067566.dkr.ecr.eu-central-1.amazonaws.com
+  BACKEND_IMAGE: devops-backend
+  FRONTEND_IMAGE: devops-frontend
+
+jobs:
+  # Job 1: Build and Push Docker Images
+  build-and-push:
+    name: Build and Push Images
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'build')
+    
+    strategy:
+      matrix:
+        service: [backend, frontend]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+        
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+      
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.ECR_REGISTRY }}/${{ matrix.service == 'backend' && env.BACKEND_IMAGE || env.FRONTEND_IMAGE }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+          type=raw,value={{date 'YYYYMMDD-HHmmss'}}
+          
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./${{ matrix.service }}
+        file: ./${{ matrix.service }}/Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64
+
+  # Job 2: Run Tests
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'test')
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: testpassword
+          MYSQL_DATABASE: security_monitor_test
+          MYSQL_USER: testuser
+          MYSQL_PASSWORD: testpassword
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Backend Tests
+      run: |
+        cd backend
+        python -m venv venv
+        source venv/bin/activate
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-asyncio httpx
+        export DATABASE_URL="mysql+pymysql://testuser:testpassword@localhost:3306/security_monitor_test"
+        pytest tests/ -v --cov=. --cov-report=xml --cov-report=html || true
+        
+    - name: Frontend Tests
+      run: |
+        cd frontend
+        npm ci
+        npm run lint || true
+        npm test -- --coverage --watchAll=false || true
+
+  # Job 3: Security Scan
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'security-scan')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-fs-results.sarif'
+        
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-fs-results.sarif'
+        
+    - name: Run CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        languages: python, javascript
+        
+    - name: Run Bandit Security Linter (Python)
+      run: |
+        pip install bandit
+        bandit -r backend/ -f json -o bandit-results.json || true
+        
+    - name: Run ESLint Security Plugin (JavaScript)
+      run: |
+        cd frontend
+        npm install
+        npm install --save-dev eslint-plugin-security
+        npx eslint . --ext .js,.jsx --format json --output-file ../eslint-security-results.json || true
+
+  # Job 4: Deploy to Environment
+  deploy:
+    name: Deploy to Environment
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || (github.event.inputs.environment || 'staging') }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+        
+    - name: Update kubeconfig
+      run: |
+        aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name devops_cluster
+        
+    - name: Deploy to environment
+      run: |
+        # Determine image tag
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.image_tag }}" ]; then
+          IMAGE_TAG="${{ github.event.inputs.image_tag }}"
+        elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          IMAGE_TAG="latest"
+        else
+          IMAGE_TAG="${{ github.sha }}"
+        fi
+        
+        # Update image tags in Kubernetes manifests
+        sed -i "s|image: .*devops-backend.*|image: ${{ env.ECR_REGISTRY }}/${{ env.BACKEND_IMAGE }}:$IMAGE_TAG|g" kubernetes/backend-deployment.yaml
+        sed -i "s|image: .*devops-frontend.*|image: ${{ env.ECR_REGISTRY }}/${{ env.FRONTEND_IMAGE }}:$IMAGE_TAG|g" kubernetes/frontend-deployment.yaml
+        
+        # Apply Kubernetes manifests
+        kubectl apply -f kubernetes/namespace.yaml
+        kubectl apply -f kubernetes/configmap.yaml
+        kubectl apply -f kubernetes/secret.yaml
+        kubectl apply -f kubernetes/backend-deployment.yaml
+        kubectl apply -f kubernetes/backend-service.yaml
+        kubectl apply -f kubernetes/frontend-deployment.yaml
+        kubectl apply -f kubernetes/frontend-service.yaml
+        
+        # Apply ingress for production
+        if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          kubectl apply -f kubernetes/ingress.yaml
+        fi
+        
+    - name: Wait for deployment
+      run: |
+        kubectl rollout status deployment/security-monitor-backend -n security-monitor --timeout=300s
+        kubectl rollout status deployment/security-monitor-frontend -n security-monitor --timeout=300s
+        
+    - name: Run health checks
+      run: |
+        # Get service endpoints
+        BACKEND_URL=$(kubectl get svc security-monitor-backend -n security-monitor -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "localhost")
+        FRONTEND_URL=$(kubectl get svc security-monitor-frontend -n security-monitor -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "localhost")
+        
+        # Health check backend
+        if [ "$BACKEND_URL" != "localhost" ]; then
+          curl -f http://$BACKEND_URL:8000/health || echo "Backend health check failed"
+        fi
+        
+        # Health check frontend
+        if [ "$FRONTEND_URL" != "localhost" ]; then
+          curl -f http://$FRONTEND_URL:3000 || echo "Frontend health check failed"
+        fi
+        
+    - name: Notify deployment success
+      if: success()
+      run: |
+        echo "✅ Deployment successful!"
+        kubectl get pods -n security-monitor
+        kubectl get svc -n security-monitor
+
+  # Job 5: Rollback Deployment
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'rollback'
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+        
+    - name: Update kubeconfig
+      run: |
+        aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name devops_cluster
+        
+    - name: Rollback backend deployment
+      run: |
+        if [ -n "${{ github.event.inputs.image_tag }}" ]; then
+          # Rollback to specific tag
+          kubectl set image deployment/security-monitor-backend backend=${{ env.ECR_REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.event.inputs.image_tag }} -n security-monitor
+        else
+          # Rollback to previous version
+          kubectl rollout undo deployment/security-monitor-backend -n security-monitor
+        fi
+        
+    - name: Rollback frontend deployment
+      run: |
+        if [ -n "${{ github.event.inputs.image_tag }}" ]; then
+          # Rollback to specific tag
+          kubectl set image deployment/security-monitor-frontend frontend=${{ env.ECR_REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${{ github.event.inputs.image_tag }} -n security-monitor
+        else
+          # Rollback to previous version
+          kubectl rollout undo deployment/security-monitor-frontend -n security-monitor
+        fi
+        
+    - name: Wait for rollback completion
+      run: |
+        kubectl rollout status deployment/security-monitor-backend -n security-monitor --timeout=300s
+        kubectl rollout status deployment/security-monitor-frontend -n security-monitor --timeout=300s
+        
+    - name: Verify rollback
+      run: |
+        echo "Rollback completed successfully!"
+        kubectl get pods -n security-monitor
+        kubectl get deployments -n security-monitor
+
